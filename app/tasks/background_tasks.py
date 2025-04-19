@@ -75,4 +75,7 @@ def process_sentiment_and_stake(netuid: int, hotkey: str) -> None:
     if sentiment_score is None:
         logger.error(f'Error fetching sentiment score, abandoning stake/unstake operation')
         return
+    if not -100 <= sentiment_score <= 100:
+        logger.error(f'Invalid sentiment score extracted: {sentiment_score}, abandoning stake/unstake operation')
+        return
     asyncio.run(submit_stake_adjustment(sentiment_score=sentiment_score, netuid=netuid, hotkey=hotkey))
