@@ -1,0 +1,6 @@
+venv
+.idea
+.env.example
+.env
+logs
+test.py

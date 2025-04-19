@@ -1,0 +1,11 @@
+bittensor
+fastapi
+uvicorn
+python-dotenv
+pydantic
+pydantic-settings
+redis
+SQLAlchemy
+celery
+asyncpg
+

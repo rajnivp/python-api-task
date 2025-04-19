@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${database_url}
+      - REDIS_URL=${redis_url}
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - API_KEY=${api_key}
+      - DATURA_API_KEY=${datura_api_key}
+      - CHUTES_API_KEY=${chutes_api_key}
+      - SUBTENSOR_NETWORK=${subtensor_network}
+      - WALLET_HOTKEY=${wallet_hotkey}
+      - WALLET_NETUID=${wallet_netuid}
+      - WALLET_NAME=${wallet_name}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - .:/app
+    networks:
+      - tao_network
+
+  celery_worker:
+    build: .
+    command: poetry run celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=${database_url}
+      - REDIS_URL=${redis_url}
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - API_KEY=${api_key}
+      - DATURA_API_KEY=${datura_api_key}
+      - CHUTES_API_KEY=${chutes_api_key}
+      - SUBTENSOR_NETWORK=${subtensor_network}
+      - WALLET_HOTKEY=${wallet_hotkey}
+      - WALLET_NETUID=${wallet_netuid}
+      - WALLET_NAME=${wallet_name}
+    depends_on:
+      - api
+      - db
+      - redis
+    volumes:
+      - .:/app
+    networks:
+      - tao_network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tao_api
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - tao_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tao_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  tao_network:
+    driver: bridge 
