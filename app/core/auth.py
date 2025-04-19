@@ -1,7 +1,4 @@
-from typing import Optional
-
 from fastapi import Header, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials
 
 from app.core.config import settings
 

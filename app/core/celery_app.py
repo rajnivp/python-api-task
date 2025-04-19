@@ -1,6 +1,5 @@
-from typing import Any
-
 from celery import Celery
+
 from app.core.config import settings
 
 # Create Celery app

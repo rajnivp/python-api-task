@@ -7,7 +7,6 @@ from app.core.config import bts
 from app.core.logger import logger
 from app.db.database import create_async_engine, sessionmaker, settings, AsyncSession
 from app.db.models import SentimentStakeOperation
-from app.services.bittensor_service import BitTensorService
 
 
 async def submit_stake_adjustment(

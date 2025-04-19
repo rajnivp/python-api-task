@@ -1,8 +1,8 @@
 from functools import lru_cache
-from typing import Any
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.services.bittensor_service import BitTensorService
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     wallet_hotkey: str
     wallet_netuid: int
     wallet_name: str
-    CACHE_EXPIRATION: int = 120  # Cache expiration time in seconds (2 minutes)
+    CACHE_EXPIRATION: int = 120  # REDIS Cache expiration time in seconds (2 minutes)
 
     model_config: SettingsConfigDict = SettingsConfigDict(env_file=".env")
 

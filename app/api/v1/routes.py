@@ -23,7 +23,7 @@ async def get_tao_dividends(
     netuids_and_hotkeys: Dict[int, List[str]] = {}
     dividends = dict()
     logger.info(f'Params received, netuid:{netuid}, hotkey: {hotkey}, trade:{trade}')
-    
+
     if not netuid:
         logger.info(f'No netuid provided, fetching all subnet netuids...')
         all_netuids: List[int] = await bts.get_all_netuids()
@@ -50,7 +50,7 @@ async def get_tao_dividends(
             cache_key: str = f"dividends:{netuid}:{hotkey}"
             cached: Optional[bytes] = await r.get(cache_key)
             logger.info(f'Cached: {cached} for cache_key: {cache_key}')
-            
+
             if cached:
                 result: str = cached.decode()
             else:

@@ -1,13 +1,11 @@
-# app/core/logger.py
-
 import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Any
+from typing import Any
 
 import pytz
-from pytz import timezone, UTC
+from pytz import timezone
 
 # Timezone and paths
 TZ: timezone = pytz.timezone('US/Eastern')
@@ -20,7 +18,7 @@ logger: logging.Logger = logging.getLogger("tao_service")
 logger.setLevel(logging.DEBUG)
 
 log_fmt: str = '%(asctime)s [%(processName)s: %(process)d] [%(threadName)s: %(thread)d] ' \
-          '[%(levelname)s] %(name)s: %(message)s'
+               '[%(levelname)s] %(name)s: %(message)s'
 date_fmt: str = '%Y-%m-%d %H:%M:%S'
 formatter: logging.Formatter = logging.Formatter(fmt=log_fmt, datefmt=date_fmt)
 

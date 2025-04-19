@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional, ClassVar
 
 from sqlalchemy import Column, Integer, String, Float, DateTime
-from sqlalchemy.orm import DeclarativeMeta
 
 from app.db.database import Base, engine
 
@@ -27,7 +26,8 @@ class SentimentStakeOperation(Base):
     sentiment_score: Optional[float] = Column(Float, nullable=True)
     amount: float = Column(Float, nullable=False)  # Positive for stake, negative for unstake
     transaction_hash: Optional[str] = Column(String, nullable=True)  # Blockchain transaction hash
-    status: str = Column(String, nullable=False)  # 'pending', 'completed', 'failed'
+    operation: str = Column(Float, nullable=False)
+    status: str = Column(String, nullable=False)  # 'completed', 'failed'
     created_at: datetime = Column(DateTime, default=datetime.utcnow)
     completed_at: Optional[datetime] = Column(DateTime, nullable=True)
 

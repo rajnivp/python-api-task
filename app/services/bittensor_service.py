@@ -1,8 +1,7 @@
-from typing import List, Dict, Any
+from typing import List
 
 from bittensor.core.async_subtensor import AsyncSubtensor
 from bittensor.core.metagraph import Metagraph
-from bittensor_cli.cli import Balance
 from bittensor_wallet.wallet import Wallet
 
 

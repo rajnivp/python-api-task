@@ -1,15 +1,14 @@
 import json
 import re
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, List
 
 import aiohttp
-from aiohttp import ClientSession, ClientResponse
 
 from app.core.config import settings
 from app.core.logger import logger
 
 
-async def get_sentiment(data: Dict[str, Any]) -> Optional[int]:
+async def get_sentiment(data: List[Dict[str, Any]]) -> Optional[int]:
     api_token: str = settings.chutes_api_key
 
     headers: Dict[str, str] = {
@@ -53,5 +52,6 @@ def extract_sentiment_score(response: Dict[str, Any]) -> Optional[int]:
             score: int = int(match.group(1))
             logger.info(f'Sentiment score: {score}')
             return score
-    except (KeyError, IndexError, ValueError):
+    except (KeyError, IndexError, ValueError) as e:
+        logger.exception(e)
         pass

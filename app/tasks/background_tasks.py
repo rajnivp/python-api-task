@@ -1,10 +1,8 @@
-# app/tasks/workflow.py
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import List, Dict, Any, Optional, Union
 
-from celery import Task
 from app.core.celery_app import celery_app
 from app.db.database import create_async_engine, sessionmaker, settings, AsyncSession
 from app.db.models import Dividend
@@ -15,6 +13,7 @@ from app.services.staking import submit_stake_adjustment
 logger = logging.getLogger(__name__)
 
 ResultType = Dict[str, Union[bool, str]]
+
 
 @celery_app.task
 def store_dividends_batch_task(
@@ -73,4 +72,7 @@ def process_sentiment_and_stake(netuid: int, hotkey: str) -> None:
         logger.error(f'Error fetching tweets, abandoning stake/unstake operation')
         return
     sentiment_score: float = asyncio.run(get_sentiment(data=tweets))
+    if sentiment_score is None:
+        logger.error(f'Error fetching sentiment score, abandoning stake/unstake operation')
+        return
     asyncio.run(submit_stake_adjustment(sentiment_score=sentiment_score, netuid=netuid, hotkey=hotkey))
