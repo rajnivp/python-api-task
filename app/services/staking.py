@@ -18,8 +18,12 @@ def submit_stake_adjustment(
     if sentiment_score > 0:
         operation = 'stake'
         try:
-            success = asyncio.run(bts.add_stake(wallet=bts.wallet, netuid=netuid,
-                                                amount=Balance.from_tao(amount=amount), hotkey_ss58=hotkey))
+            loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            success = loop.run_until_complete(bts.add_stake(wallet=bts.wallet, netuid=netuid,
+                                                            amount=Balance.from_tao(amount=amount), hotkey_ss58=hotkey))
+            logger.info(success)
+            loop.close()
         except Exception as e:
             logger.error(f"Error staking amount: {amount}: {str(e)}", exc_info=True)
             success = False
@@ -27,8 +31,13 @@ def submit_stake_adjustment(
     elif sentiment_score < 0:
         operation = 'unstake'
         try:
-            success = asyncio.run(bts.unstake(wallet=bts.wallet, netuid=netuid,
-                                              amount=Balance.from_tao(amount=abs(amount)), hotkey_ss58=hotkey))
+            loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            success = loop.run_until_complete(bts.unstake(wallet=bts.wallet, netuid=netuid,
+                                                          amount=Balance.from_tao(amount=abs(amount)),
+                                                          hotkey_ss58=hotkey))
+            logger.info(success)
+            loop.close()
         except Exception as e:
             logger.error(f"Error unstaking amount: {amount}: {str(e)}", exc_info=True)
             success = False

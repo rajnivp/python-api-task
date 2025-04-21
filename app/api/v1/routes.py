@@ -37,24 +37,25 @@ def get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids: List[int]) -> 
 
 @router.get("/tao_dividends", dependencies=[Depends(verify_token)])
 async def get_tao_dividends(
-        netuid: int = 0,
+        netuid: int = None,
         hotkey: str = '',
         trade: bool = False
-) -> Dict[str, Union[bool, List[Dict[str, Any]]]]:
+) -> Dict[str, Union[bool, str, List[Dict[str, Any]]]]:
     logger.info(f'Params received, netuid:{netuid}, hotkey: {hotkey}, trade:{trade}')
 
+    netuid_hotkeys_dividends = dict()
     response_items = []
     dividends_to_store = []
     cached = False
     msg = ''
-    staking_netuid = netuid or settings.wallet_netuid
+    staking_netuid = netuid if netuid is not None else settings.wallet_netuid
     staking_hotkey = hotkey or settings.wallet_hotkey
 
     # Not caching dividends when netuid or hotkey is ommited, because to get data from redis cache
     # we need to have netuid and hotkey so that's why in those two cases we're getting data from bittensor
     # and as they send data for all hotkeys in single response it's quick
 
-    if not netuid:  # Fetching dividends also as hotkeys and dividends are available in same response
+    if netuid is None:  # Fetching dividends also as hotkeys and dividends are available in same response
         # Get all netuid and their hotkeys and their dividends
         logger.info('No netuid provided, fetching all subnet netuids...')
         try:
@@ -62,7 +63,7 @@ async def get_tao_dividends(
         except Exception as e:
             logger.error(f"Error in getting all netuids: {str(e)}", exc_info=True)
             all_netuids = []
-        all_netuids = all_netuids[:3]
+        all_netuids = all_netuids
         logger.info(f'All subnet netuids: {all_netuids}, fetching hotkeys and dividends for all')
         netuid_hotkeys_dividends = get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids=all_netuids)
         if not netuid_hotkeys_dividends:
@@ -85,16 +86,20 @@ async def get_tao_dividends(
         else:
             cached = False
             res = get_hotkeys_and_dividends_for_netuid(netuid)
-            dividend = res.get(netuid, {}).get(hotkey, {})
-            if not dividend:
-                msg = f'Dividend data not found for netuid: {netuid} and hotkey: {hotkey}'
+            if not res:
+                msg = f'No data found for netuid: {netuid}'
                 logger.error(msg)
-            netuid_hotkeys_dividends = {netuid: {hotkey: dividend}}
-            await redis_instance.setex(cache_key, CACHE_EXPIRATION, dividend)
+            else:
+                dividend = res.get(netuid, {}).get(hotkey, {})
+                if not dividend:
+                    msg = f'Dividend data not found for netuid: {netuid} and hotkey: {hotkey}'
+                    logger.error(msg)
+                netuid_hotkeys_dividends = {netuid: {hotkey: dividend}}
+                await redis_instance.setex(cache_key, CACHE_EXPIRATION, dividend)
 
     if not netuid_hotkeys_dividends:
         logger.info(msg)
-        return {'success': False, 'msg': msg}
+        return {'success': False, 'msg': msg, 'result': response_items}
 
     logger.info(f'Netuids, hotkeys and dividends: {netuid_hotkeys_dividends}')
 

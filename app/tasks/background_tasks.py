@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 
 from app.core.celery_app import celery_app
 from app.db.database import create_async_engine, sessionmaker, settings, AsyncSession
@@ -12,13 +12,11 @@ from app.services.staking import submit_stake_adjustment
 
 logger = logging.getLogger(__name__)
 
-ResultType = Dict[str, Union[bool, str]]
-
 
 @celery_app.task
 def store_dividends_batch_task(
         dividends_data: List[Dict[str, Any]],
-        timestamp_field: Optional[str] = 'timestamp') -> ResultType:
+        timestamp_field: Optional[str] = 'timestamp'):
     async def store_using_async_session():
         # Create a database session
         engine = create_async_engine(settings.database_url, echo=False)
@@ -49,9 +47,8 @@ def store_dividends_batch_task(
 
     loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    result: ResultType = loop.run_until_complete(store_using_async_session())
+    loop.run_until_complete(store_using_async_session())
     loop.close()
-    return result
 
 
 @celery_app.task

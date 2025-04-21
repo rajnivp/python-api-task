@@ -1,4 +1,3 @@
-import pprint
 from typing import List, Dict, Any
 
 from datura_py import Datura
@@ -20,7 +19,6 @@ def get_tweets(prompt: str) -> List[Dict[str, Any]]:
             streaming=False,
         )
         logger.info(f'Tweets fetched for prompt: {prompt}')
-        pprint.pprint(result)
         return result
     except Exception as e:
         logger.error(f"Error getting tweets from datura: {str(e)}", exc_info=True)
