@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     wallet_hotkey: str
     wallet_netuid: int
     wallet_name: str
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
     CACHE_EXPIRATION: int = 120  # REDIS Cache expiration time in seconds (2 minutes)
 
     model_config: SettingsConfigDict = SettingsConfigDict(env_file=".env")
