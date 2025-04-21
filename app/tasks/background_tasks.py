@@ -19,7 +19,7 @@ ResultType = Dict[str, Union[bool, str]]
 def store_dividends_batch_task(
         dividends_data: List[Dict[str, Any]],
         timestamp_field: Optional[str] = 'timestamp') -> ResultType:
-    async def store_using_async_session() -> ResultType:
+    async def store_using_async_session():
         # Create a database session
         engine = create_async_engine(settings.database_url, echo=False)
         async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -42,14 +42,10 @@ def store_dividends_batch_task(
                 db.add_all(dividend_objects)
                 await db.commit()
 
-                msg: str = f"Successfully stored {len(dividend_objects)} dividend records in batch"
-                logger.info(msg)
-                return {'success': True, 'msg': msg}
+                logger.info(f"Successfully stored {len(dividend_objects)} dividend records in batch")
             except Exception as e:
                 await db.rollback()
-                msg: str = f"Error storing dividends batch: {str(e)}"
-                logger.error(msg)
-                return {'success': True, 'msg': msg}
+                logger.error(f"Error storing dividends batch: {str(e)}", exc_info=True)
 
     loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

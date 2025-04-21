@@ -1,7 +1,5 @@
-import asyncio
-import json
-from typing import List, Dict, Any, Optional, Union, Tuple
 from concurrent.futures import ThreadPoolExecutor
+from typing import List, Dict, Any, Union
 
 import redis.asyncio as redis
 from fastapi import APIRouter, Depends
@@ -14,107 +12,27 @@ from app.tasks.background_tasks import process_sentiment_and_stake, store_divide
 
 router = APIRouter()
 
-r: Redis = redis.from_url(settings.redis_url)
+redis_instance: Redis = redis.from_url(settings.redis_url)
 
-# Cache keys
-NETUID_HOTKEYS_CACHE_KEY = "netuid_hotkeys_cache"
 CACHE_EXPIRATION = settings.CACHE_EXPIRATION
 
-# Create a thread pool for CPU-bound operations
-thread_pool = ThreadPoolExecutor(max_workers=10)
+
+def get_hotkeys_and_dividends_for_netuid(netuid: int) -> Union[Dict[int, Dict[str, float]], None]:
+    try:
+        dividends = bts.get_dividends_for_all_hot_keys(netuid=netuid)
+        return {netuid: dict(dividends)}
+    except Exception as e:
+        logger.error(f"Error in getting dividends and hotkeys for netuid {netuid}: {str(e)}", exc_info=True)
 
 
-async def get_cached_netuid_hotkeys() -> Optional[Dict[int, List[str]]]:
-    """Get netuid and hotkeys from cache if available."""
-    cached = await r.get(NETUID_HOTKEYS_CACHE_KEY)
-    if cached:
-        return json.loads(cached.decode())
-    return None
-
-
-async def cache_netuid_hotkeys(netuid_hotkeys: Dict[int, List[str]]):
-    """Cache netuid and hotkeys with expiration."""
-    await r.setex(
-        NETUID_HOTKEYS_CACHE_KEY,
-        CACHE_EXPIRATION,
-        json.dumps(netuid_hotkeys)
-    )
-
-
-def get_hotkeys_for_netuid_sync(netuid: int) -> List[str]:
-    """Synchronous function to get hotkeys for a netuid."""
-    return bts.get_hotkeys_for_netuid(netuid=netuid)
-
-
-async def get_netuid_hotkeys_with_threadpool(netuids: List[int]) -> Dict[int, List[str]]:
-    """Get hotkeys for multiple netuids using ThreadPool."""
-    loop = asyncio.get_event_loop()
-    
-    # Create tasks for each netuid
-    tasks = [
-        loop.run_in_executor(thread_pool, get_hotkeys_for_netuid_sync, netuid)
-        for netuid in netuids
-    ]
-    
-    # Wait for all tasks to complete
-    results = await asyncio.gather(*tasks)
-    
-    # Combine results
-    return {netuid: hotkeys for netuid, hotkeys in zip(netuids, results)}
-
-
-async def get_dividends_for_hotkey(netuid: int, hotkey: str) -> Tuple[bool, float]:
-    """Get dividend for a specific hotkey with caching."""
-    cache_key = f"dividends:{netuid}:{hotkey}"
-    cached = await r.get(cache_key)
-    
-    if cached:
-        return True, cached.decode()
-    
-    # Use thread pool for CPU-bound operation
-    loop = asyncio.get_event_loop()
-    dividends = await loop.run_in_executor(
-        thread_pool, 
-        lambda: bts.get_dividends_for_all_hot_keys(netuid=netuid)
-    )
-    
-    result = dict(dividends).get(hotkey)
-    
-    if result:
-        await r.setex(cache_key, CACHE_EXPIRATION, result)
-    
-    return False, result
-
-
-async def process_hotkey_batch(netuid: int, hotkeys: List[str], trade: bool) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Process a batch of hotkeys for a specific netuid."""
-    response_items = []
-    dividends_to_store = []
-    
-    # Get dividends for all hotkeys in parallel
-    dividend_tasks = [get_dividends_for_hotkey(netuid, hotkey) for hotkey in hotkeys]
-    dividend_results = await asyncio.gather(*dividend_tasks)
-    
-    for hotkey, result in zip(hotkeys, dividend_results):
-        try:
-            dividend_amount = float(result[1]) if result[1] else 0.0
-            dividends_to_store.append({
-                "netuid": netuid,
-                "hotkey": hotkey,
-                "amount": dividend_amount
-            })
-            
-            response_items.append({
-                'netuid': netuid,
-                'hotkey': hotkey,
-                'dividend': result,
-                'stake_tx_triggered': trade,
-                'cached': result[0]
-            })
-        except Exception as e:
-            logger.error(f"Error processing dividend for netuid {netuid}, hotkey {hotkey}: {str(e)}", exc_info=True)
-    
-    return response_items, dividends_to_store
+def get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids: List[int]) -> Dict[int, Dict[str, float]]:
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        res = executor.map(get_hotkeys_and_dividends_for_netuid, netuids)
+    dividends_data = dict()
+    for r in res:
+        if r is not None:
+            dividends_data.update(r)
+    return dividends_data
 
 
 @router.get("/tao_dividends", dependencies=[Depends(verify_token)])
@@ -124,63 +42,92 @@ async def get_tao_dividends(
         trade: bool = False
 ) -> Dict[str, Union[bool, List[Dict[str, Any]]]]:
     logger.info(f'Params received, netuid:{netuid}, hotkey: {hotkey}, trade:{trade}')
-    
-    # Initialize response containers
-    all_response_items = []
-    all_dividends_to_store = []
-    
-    try:
-        if not netuid:
-            # Try to get netuid_hotkeys from cache first
-            netuid_hotkeys = await get_cached_netuid_hotkeys()
-            
-            if not netuid_hotkeys:
-                # If not in cache, fetch all netuids and their hotkeys using ThreadPool
-                logger.info('No netuid provided, fetching all subnet netuids...')
-                all_netuids = await bts.get_all_netuids()
-                logger.info(f'All subnet netuids: {all_netuids}')
-                
-                # Use ThreadPool for CPU-bound operations
-                netuid_hotkeys = await get_netuid_hotkeys_with_threadpool(all_netuids)
-                await cache_netuid_hotkeys(netuid_hotkeys)
-        elif not hotkey:
-            # Get hotkeys for specific netuid using ThreadPool
-            logger.info(f'Hotkey not provided, getting all hotkeys for netuid {netuid}')
-            loop = asyncio.get_event_loop()
-            hotkeys = await loop.run_in_executor(thread_pool, get_hotkeys_for_netuid_sync, netuid)
-            netuid_hotkeys = {netuid: hotkeys}
+
+    response_items = []
+    dividends_to_store = []
+    cached = False
+    msg = ''
+    staking_netuid = netuid or settings.wallet_netuid
+    staking_hotkey = hotkey or settings.wallet_hotkey
+
+    # Not caching dividends when netuid or hotkey is ommited, because to get data from redis cache
+    # we need to have netuid and hotkey so that's why in those two cases we're getting data from bittensor
+    # and as they send data for all hotkeys in single response it's quick
+
+    if not netuid:  # Fetching dividends also as hotkeys and dividends are available in same response
+        # Get all netuid and their hotkeys and their dividends
+        logger.info('No netuid provided, fetching all subnet netuids...')
+        try:
+            all_netuids = await bts.get_all_netuids()
+        except Exception as e:
+            logger.error(f"Error in getting all netuids: {str(e)}", exc_info=True)
+            all_netuids = []
+        all_netuids = all_netuids[:3]
+        logger.info(f'All subnet netuids: {all_netuids}, fetching hotkeys and dividends for all')
+        netuid_hotkeys_dividends = get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids=all_netuids)
+        if not netuid_hotkeys_dividends:
+            msg = f'Dividends data not found for netuids: {all_netuids}'
+
+    elif not hotkey:  # Fetching dividends also as hotkeys and dividends are available in same response
+        # Get hotkeys and their dividends for specific netuid
+        logger.info(f'Hotkey not provided, getting all hotkeys and their dividends for netuid {netuid}')
+        netuid_hotkeys_dividends = get_hotkeys_and_dividends_for_netuid(netuid)
+        if not netuid_hotkeys_dividends:
+            msg = f'Dividends data not found for hotkeys for netuid: {netuid}'
+
+    else:  # Checking redis cache and if dividend is not in redis cache then only fetching from bittensor
+        # Single hotkey case
+        cache_key = f'{netuid}:{hotkey}'
+        cached = await redis_instance.get(cache_key)
+        if cached:
+            cached = True
+            netuid_hotkeys_dividends = {netuid: {hotkey: cached}}
         else:
-            # Single hotkey case
-            netuid_hotkeys = {netuid: [hotkey]}
-        
-        # Process each netuid's hotkeys in parallel
-        tasks = [
-            process_hotkey_batch(netuid, hotkeys, trade)
-            for netuid, hotkeys in netuid_hotkeys.items()
-        ]
-        batch_results = await asyncio.gather(*tasks)
-        
-        # Collect results from all batches
-        for response_items, dividends_to_store in batch_results:
-            all_response_items.extend(response_items)
-            all_dividends_to_store.extend(dividends_to_store)
-        
-        # Store dividends in batch
-        if all_dividends_to_store:
-            try:
-                task = store_dividends_batch_task.delay(all_dividends_to_store)
-                logger.info(f"Triggered batch dividend storage task with task_id: {task.id} for "
-                            f"{len(all_dividends_to_store)} records")
-            except Exception as e:
-                logger.error(f"Error triggering batch dividend storage task: {str(e)}", exc_info=True)
-        
-        # Start sentiment analysis and staking if requested
-        if trade:
-            process_sentiment_and_stake.delay(netuid, hotkey)
-            logger.info(f"Started sentiment analysis and staking workflow for netuid {netuid}")
-        
-        return {'success': True, 'result': all_response_items}
-        
+            cached = False
+            res = get_hotkeys_and_dividends_for_netuid(netuid)
+            dividend = res.get(netuid, {}).get(hotkey, {})
+            if not dividend:
+                msg = f'Dividend data not found for netuid: {netuid} and hotkey: {hotkey}'
+                logger.error(msg)
+            netuid_hotkeys_dividends = {netuid: {hotkey: dividend}}
+            await redis_instance.setex(cache_key, CACHE_EXPIRATION, dividend)
+
+    if not netuid_hotkeys_dividends:
+        logger.info(msg)
+        return {'success': False, 'msg': msg}
+
+    logger.info(f'Netuids, hotkeys and dividends: {netuid_hotkeys_dividends}')
+
+    for netuid, result in netuid_hotkeys_dividends.items():
+        for hotkey, dividend in result.items():
+            dividends_to_store.append({
+                "netuid": netuid,
+                "hotkey": hotkey,
+                "amount": dividend
+            })
+
+            response_items.append({
+                'netuid': netuid,
+                'hotkey': hotkey,
+                'dividend': dividend,
+                'stake_tx_triggered': trade,
+                'cached': cached
+            })
+
+    # Store dividends in batch
+    try:
+        task = store_dividends_batch_task.delay(dividends_to_store)
+        logger.info(f"Triggered batch dividend storage task with task_id: {task.id} for "
+                    f"{len(dividends_to_store)} records")
     except Exception as e:
-        logger.error(f"Error in get_tao_dividends: {str(e)}", exc_info=True)
-        return {'success': False, 'result': [], 'error': str(e)}
+        logger.error(f"Error triggering batch dividend storage task: {str(e)}", exc_info=True)
+
+    # Start sentiment analysis and staking if requested
+    if trade:
+        try:
+            process_sentiment_and_stake.delay(staking_netuid, staking_hotkey)
+            logger.info(f"Started sentiment analysis and staking workflow for netuid {staking_netuid}")
+        except Exception as e:
+            logger.error(f"Error triggering staking task: {str(e)}", exc_info=True)
+
+    return {'success': True, 'result': response_items}

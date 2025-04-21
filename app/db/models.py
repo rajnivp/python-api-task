@@ -38,3 +38,4 @@ async def init_models() -> None:
 
 
 asyncio.run(init_models())
+

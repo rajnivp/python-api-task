@@ -21,7 +21,7 @@ def submit_stake_adjustment(
             success = asyncio.run(bts.add_stake(wallet=bts.wallet, netuid=netuid,
                                                 amount=Balance.from_tao(amount=amount), hotkey_ss58=hotkey))
         except Exception as e:
-            logger.error(f"Error staking amount: {amount}: {str(e)}")
+            logger.error(f"Error staking amount: {amount}: {str(e)}", exc_info=True)
             success = False
 
     elif sentiment_score < 0:
@@ -30,7 +30,7 @@ def submit_stake_adjustment(
             success = asyncio.run(bts.unstake(wallet=bts.wallet, netuid=netuid,
                                               amount=Balance.from_tao(amount=abs(amount)), hotkey_ss58=hotkey))
         except Exception as e:
-            logger.error(f"Error unstaking amount: {amount}: {str(e)}")
+            logger.error(f"Error unstaking amount: {amount}: {str(e)}", exc_info=True)
             success = False
     else:
         logger.info(f'Sentiment score is 0 so abandoning stake/unstake operation')
@@ -57,7 +57,7 @@ def submit_stake_adjustment(
                 logger.info(f"Successfully stored {sentiment_data}")
             except Exception as e:
                 await db.rollback()
-                logger.error(f"Error storing sentiment data: {str(e)}, data: {sentiment_data}")
+                logger.error(f"Error storing sentiment data: {str(e)}, data: {sentiment_data}", exc_info=True)
 
     loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

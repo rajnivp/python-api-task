@@ -21,7 +21,8 @@ async def get_sentiment(data: List[Dict[str, Any]]) -> Optional[int]:
         "messages": [
             {
                 "role": "user",
-                "content": f"provide sentiment score on this from this nested dict: {data}, "
+                "content": f"provide sentiment score on this from this nested dict after extracting "
+                           f"relevant data correctly: {data}, "
                            f"where 100 is most positive and -100 being most negative, return only integer, "
                            f"Do not include an explaination, in response dict add key named sentiment_score "
                            f"with sentiment score as value of it"
@@ -31,16 +32,19 @@ async def get_sentiment(data: List[Dict[str, Any]]) -> Optional[int]:
         "max_tokens": 1024,
         "temperature": 0.7
     }
+    try:
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
-                "https://llm.chutes.ai/v1/chat/completions",
-                headers=headers,
-                json=body
-        ) as response:
-            res: bytes = await response.content.read()
-            res_dict: Dict[str, Any] = json.loads(res.decode("utf-8"))
-            return extract_sentiment_score(res_dict)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                    "https://llm.chutes.ai/v1/chat/completions",
+                    headers=headers,
+                    json=body
+            ) as response:
+                res: bytes = await response.content.read()
+                res_dict: Dict[str, Any] = json.loads(res.decode("utf-8"))
+                return extract_sentiment_score(res_dict)
+    except Exception as e:
+        logger.error(f"Error getting sentiment data from chutes: {str(e)}", exc_info=True)
 
 
 def extract_sentiment_score(response: Dict[str, Any]) -> Optional[int]:
@@ -53,5 +57,4 @@ def extract_sentiment_score(response: Dict[str, Any]) -> Optional[int]:
             logger.info(f'Sentiment score: {score}')
             return score
     except (KeyError, IndexError, ValueError) as e:
-        logger.exception(e)
-        pass
+        logger.error(f"Error getting extracting sentiment score: {str(e)}", exc_info=True)
