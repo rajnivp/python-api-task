@@ -26,7 +26,7 @@ class SentimentStakeOperation(Base):
     sentiment_score: Optional[float] = Column(Float, nullable=True)
     amount: float = Column(Float, nullable=False)  # Positive for stake, negative for unstake
     transaction_hash: Optional[str] = Column(String, nullable=True)  # Blockchain transaction hash
-    operation: str = Column(Float, nullable=False)
+    operation: str = Column(String, nullable=False)
     status: str = Column(String, nullable=False)  # 'completed', 'failed'
     created_at: datetime = Column(DateTime, default=datetime.utcnow)
     completed_at: Optional[datetime] = Column(DateTime, nullable=True)
