@@ -9,7 +9,7 @@ from app.db.database import create_async_engine, sessionmaker, settings, AsyncSe
 from app.db.models import SentimentStakeOperation
 
 
-async def submit_stake_adjustment(
+def submit_stake_adjustment(
         sentiment_score: Optional[float],
         netuid: int,
         hotkey: str
@@ -43,16 +43,23 @@ async def submit_stake_adjustment(
         'operation': operation,
         'status': 'completed' if success else 'failed'
     }
-    # Create a database session
-    engine = create_async_engine(settings.database_url, echo=False)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as db:
-        try:
-            # Add all objects to the session
-            db.add(SentimentStakeOperation(**sentiment_data))
-            await db.commit()
 
-            logger.info(f"Successfully stored {sentiment_data}")
-        except Exception as e:
-            await db.rollback()
-            logger.error(f"Error storing sentiment data: {str(e)}, data: {sentiment_data}")
+    async def stake_store_async():
+        # Create a database session
+        engine = create_async_engine(settings.database_url, echo=False)
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with async_session() as db:
+            try:
+                # Add all objects to the session
+                db.add(SentimentStakeOperation(**sentiment_data))
+                await db.commit()
+
+                logger.info(f"Successfully stored {sentiment_data}")
+            except Exception as e:
+                await db.rollback()
+                logger.error(f"Error storing sentiment data: {str(e)}, data: {sentiment_data}")
+
+    loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(stake_store_async())
+    loop.close()
