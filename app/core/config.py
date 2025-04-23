@@ -9,7 +9,8 @@ class Settings(BaseSettings):
     api_key: str
     datura_api_key: str
     chutes_api_key: str
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str
+    redis_port: int
     database_url: str
     subtensor_network: str
     wallet_hotkey: str

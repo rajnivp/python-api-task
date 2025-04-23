@@ -1,6 +1,9 @@
 bittensor
+bittensor-cli
+datura-py
 fastapi
 uvicorn
+pytz
 python-dotenv
 pydantic
 pydantic-settings
@@ -8,5 +11,3 @@ redis
 SQLAlchemy
 celery
 asyncpg
-
-

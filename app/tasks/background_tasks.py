@@ -60,7 +60,7 @@ def process_sentiment_and_stake(netuid: int, hotkey: str) -> None:
         netuid: The network UID
         hotkey: The hotkey for staking
     """
-    tweets: List[Dict[str, Any]] = get_tweets(prompt=f'Bittensor')
+    tweets: List[Dict[str, Any]] = get_tweets(prompt=f'Bittensor netuid {netuid}')
     if not tweets:
         logger.error(f'Error fetching tweets, abandoning stake/unstake operation')
         return

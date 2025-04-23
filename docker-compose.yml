@@ -27,7 +27,7 @@ services:
 
   celery_worker:
     build: .
-    command: poetry run celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.core.celery_app worker --loglevel=info
     environment:
       - DATABASE_URL=${database_url}
       - REDIS_URL=${redis_url}
@@ -52,11 +52,11 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER: ${postgres_user}
-      - POSTGRES_PASSWORD: ${postgres_password}
-      - POSTGRES_DB: ${postgres_db}
+      - POSTGRES_USER=${postgres_user}
+      - POSTGRES_PASSWORD=${postgres_password}
+      - POSTGRES_DB=${postgres_db}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -65,7 +65,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:

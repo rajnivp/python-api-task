@@ -37,5 +37,19 @@ async def init_models() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
-asyncio.run(init_models())
+def run_async(func):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
 
+    if loop and loop.is_running():
+        # We're inside an existing event loop (e.g., FastAPI)
+        return asyncio.ensure_future(func())
+    else:
+        # No loop running - safe to use asyncio.run()
+        return asyncio.run(func())
+
+
+# Call it safely
+run_async(init_models)
