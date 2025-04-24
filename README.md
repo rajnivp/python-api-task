@@ -206,3 +206,10 @@ python-api-task/
 ├── requirements.txt             # Python dependencies
 └── README.md                    # Project documentation
 ```
+
+
+## Project videos
+
+1. Project structure overview and implementation decisions: https://www.loom.com/share/854b83ed7adc4749a94f3fdc3c298ac1
+2. Application running demo: 
+
