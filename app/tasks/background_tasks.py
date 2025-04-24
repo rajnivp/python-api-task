@@ -21,6 +21,35 @@ from app.services.staking import submit_stake_adjustment
 logger = logging.getLogger(__name__)
 
 
+def run_async(coroutine):
+    """
+    Helper function to run an async coroutine from a synchronous context.
+    
+    This function safely handles running async code in both sync and async contexts,
+    avoiding the need to manually create and manage event loops.
+    
+    Args:
+        coroutine: The async coroutine to run
+        
+    Returns:
+        The result of the coroutine
+    """
+    try:
+        # Try to get the current event loop
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # If no loop is running, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(coroutine)
+        finally:
+            loop.close()
+    else:
+        # If a loop is already running, use it
+        return asyncio.ensure_future(coroutine)
+
+
 @celery_app.task
 def store_dividends_batch_task(
         dividends_data: List[Dict[str, Any]],
@@ -64,10 +93,8 @@ def store_dividends_batch_task(
                 await db.rollback()
                 logger.error(f"Error storing dividends batch: {str(e)}", exc_info=True)
 
-    loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(store_using_async_session())
-    loop.close()
+    # Use the helper function to run the async database operation
+    run_async(store_using_async_session())
 
 
 @celery_app.task
@@ -90,7 +117,10 @@ def process_sentiment_and_stake(netuid: int, hotkey: str) -> None:
     if not tweets:
         logger.error(f'Error fetching tweets, abandoning stake/unstake operation')
         return
-    sentiment_score: float = asyncio.run(get_sentiment(data=tweets))
+    
+    # Use the helper function to run the async sentiment analysis
+    sentiment_score: float = run_async(get_sentiment(data=tweets))
+    
     if sentiment_score is None:
         logger.error(f'Error fetching sentiment score, abandoning stake/unstake operation')
         return
