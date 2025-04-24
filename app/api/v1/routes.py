@@ -13,18 +13,17 @@ from fastapi import APIRouter, Depends
 from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.core.auth import verify_token
 from app.core.config import settings, bts
 from app.core.logger import logger
-from app.tasks.background_tasks import process_sentiment_and_stake, store_dividends_batch_task
 from app.db.models import Dividend, SentimentStakeOperation
-
+from app.tasks.background_tasks import process_sentiment_and_stake, store_dividends_batch_task
 
 router = APIRouter()
 
-redis_instance: Redis = redis.from_url(settings.redis_url)
+redis_instance: Redis = redis.Redis(host=settings.redis_host, port=settings.redis_port)
 
 CACHE_EXPIRATION = settings.CACHE_EXPIRATION
 
@@ -195,7 +194,7 @@ async def get_tao_dividends(
         try:
             task = store_dividends_batch_task.delay(dividends_to_store)
             logger.info(f"Triggered batch dividend storage task with task_id: {task.id} for "
-                       f"{len(dividends_to_store)} records")
+                        f"{len(dividends_to_store)} records")
         except Exception as e:
             logger.error(f"Error triggering batch dividend storage task: {str(e)}", exc_info=True)
 

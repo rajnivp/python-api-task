@@ -51,12 +51,11 @@ services:
 
   db:
     image: postgres:15-alpine
+    container_name: my_postgres
     environment:
       - POSTGRES_USER=${postgres_user}
       - POSTGRES_PASSWORD=${postgres_password}
       - POSTGRES_DB=${postgres_db}
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

@@ -21,7 +21,8 @@ class Settings(BaseSettings):
         api_key (str): API key for authentication
         datura_api_key (str): API key for Datura service
         chutes_api_key (str): API key for Chutes service
-        redis_url (str): Redis connection URL
+        redis_url (str): Redis url
+        redis_host (str): Redis host
         redis_port (int): Redis port number
         database_url (str): PostgreSQL database connection URL
         subtensor_network (str): Bittensor network name
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     datura_api_key: str
     chutes_api_key: str
     redis_url: str
+    redis_host: str
     redis_port: int
     database_url: str
     subtensor_network: str

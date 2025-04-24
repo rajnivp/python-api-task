@@ -165,14 +165,14 @@ Retrieves TAO dividends for specified network UID and hotkey, with optional sent
 
 ## Docker Deployment
 
-1. Build the Docker image:
+1. Build the Docker image and start:
 ```bash
-docker build -t python-api-task .
+docker compose -f 'docker-compose.yml' up -d --build
 ```
 
-2. Run the container:
+2. To exit
 ```bash
-docker run -p 8000:8000 --env-file .env python-api-task
+docker compose -f 'docker-compose.yml' down
 ```
 
 ## Project Structure
