@@ -1,3 +1,11 @@
+"""
+Background tasks for the TAO Dividend Sentiment Service.
+
+This module defines Celery tasks for handling asynchronous operations such as
+storing dividend data in batches and processing sentiment analysis and staking
+operations. These tasks run in the background to avoid blocking the main application.
+"""
+
 import asyncio
 import logging
 from datetime import datetime
@@ -17,6 +25,17 @@ logger = logging.getLogger(__name__)
 def store_dividends_batch_task(
         dividends_data: List[Dict[str, Any]],
         timestamp_field: Optional[str] = 'timestamp'):
+    """
+    Store multiple dividend records in the database in a single batch operation.
+    
+    Args:
+        dividends_data (List[Dict[str, Any]]): List of dividend records to store
+        timestamp_field (Optional[str]): Name of the timestamp field, defaults to 'timestamp'
+        
+    The function creates an async database session and stores all dividend records
+    in a single transaction. If any error occurs, the transaction is rolled back.
+    """
+
     async def store_using_async_session():
         # Create a database session
         engine = create_async_engine(settings.database_url, echo=False)
@@ -56,9 +75,16 @@ def process_sentiment_and_stake(netuid: int, hotkey: str) -> None:
     """
     Process sentiment analysis and stake in a chain of tasks.
     
+    This function performs the following steps:
+    1. Fetches tweets related to the specified network UID
+    2. Analyzes sentiment of the tweets
+    3. Submits a stake adjustment based on the sentiment score
+    
     Args:
-        netuid: The network UID
-        hotkey: The hotkey for staking
+        netuid (int): The network UID to analyze and stake
+        hotkey (str): The hotkey to use for staking
+        
+    The function will log errors and abort the operation if any step fails.
     """
     tweets: List[Dict[str, Any]] = get_tweets(prompt=f'Bittensor netuid {netuid}')
     if not tweets:

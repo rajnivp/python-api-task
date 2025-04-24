@@ -1,3 +1,10 @@
+"""
+API routes for the TAO Dividend Sentiment Service.
+
+This module defines the FastAPI router and endpoints for handling
+dividend data, sentiment analysis, and staking operations.
+"""
+
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Union
 
@@ -23,6 +30,16 @@ CACHE_EXPIRATION = settings.CACHE_EXPIRATION
 
 
 def get_hotkeys_and_dividends_for_netuid(netuid: int) -> Union[Dict[int, Dict[str, float]], None]:
+    """
+    Get hotkeys and dividends for a specific network UID.
+    
+    Args:
+        netuid (int): Network UID to query
+        
+    Returns:
+        Union[Dict[int, Dict[str, float]], None]: Dictionary mapping netuid to hotkey-dividend pairs,
+                                                 or None if an error occurs
+    """
     try:
         dividends = bts.get_dividends_for_all_hot_keys(netuid=netuid)
         return {netuid: dict(dividends)}
@@ -31,6 +48,15 @@ def get_hotkeys_and_dividends_for_netuid(netuid: int) -> Union[Dict[int, Dict[st
 
 
 def get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids: List[int]) -> Dict[int, Dict[str, float]]:
+    """
+    Get hotkeys and dividends for multiple network UIDs using a thread pool.
+    
+    Args:
+        netuids (List[int]): List of network UIDs to query
+        
+    Returns:
+        Dict[int, Dict[str, float]]: Dictionary mapping each netuid to its hotkey-dividend pairs
+    """
     with ThreadPoolExecutor(max_workers=10) as executor:
         res = executor.map(get_hotkeys_and_dividends_for_netuid, netuids)
     dividends_data = dict()
@@ -42,22 +68,32 @@ def get_hotkeys_and_dividends_for_all_netuids_threadpool(netuids: List[int]) -> 
 
 @router.get('/get_all_dividends_stakes_data', dependencies=[Depends(verify_token)])
 async def get_all_dividends_stakes_data():
-    engine = create_async_engine(settings.database_url, echo=False)
-    async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    async with async_session() as session:
-        result = await session.execute(select(Dividend))
-        rows = result.scalars().all()
-        dividend_rows = [
-            {key: value for key, value in row.__dict__.items() if key != '_sa_instance_state'}
-            for row in rows
-        ]
-        result = await session.execute(select(SentimentStakeOperation))
-        rows = result.scalars().all()
-        sentiment_data_rows = [
-            {key: value for key, value in row.__dict__.items() if key != '_sa_instance_state'}
-            for row in rows
-        ]
-        return {'dividends': dividend_rows, 'sentiment_data': sentiment_data_rows}
+    """
+    Get all dividend and staking operation data from the database.
+    
+    Returns:
+        Dict: Response containing dividend and sentiment data rows
+    """
+    try:
+        engine = create_async_engine(settings.database_url, echo=False)
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async with async_session() as session:
+            result = await session.execute(select(Dividend))
+            rows = result.scalars().all()
+            dividend_rows = [
+                {key: value for key, value in row.__dict__.items() if key != '_sa_instance_state'}
+                for row in rows
+            ]
+            result = await session.execute(select(SentimentStakeOperation))
+            rows = result.scalars().all()
+            sentiment_data_rows = [
+                {key: value for key, value in row.__dict__.items() if key != '_sa_instance_state'}
+                for row in rows
+            ]
+            return {'success': True, 'dividends': dividend_rows, 'sentiment_data': sentiment_data_rows}
+    except Exception as e:
+        logger.error(f"Error in get_tao_dividends: {str(e)}", exc_info=True)
+        return {'success': False, 'msg': str(e)}
 
 
 @router.get("/tao_dividends", dependencies=[Depends(verify_token)])
@@ -66,6 +102,17 @@ async def get_tao_dividends(
         hotkey: str = '',
         trade: bool = False
 ) -> Dict[str, Union[bool, str, List[Dict[str, Any]]]]:
+    """
+    Get TAO dividends for specified network UID and hotkey.
+    
+    Args:
+        netuid (int, optional): Network UID to query
+        hotkey (str, optional): Hotkey to query
+        trade (bool, optional): Whether to trigger sentiment analysis and staking
+        
+    Returns:
+        Dict[str, Union[bool, str, List[Dict[str, Any]]]]: Response containing dividend data
+    """
     logger.info(f'Params received, netuid:{netuid}, hotkey: {hotkey}, trade:{trade}')
     try:
         netuid_hotkeys_dividends = dict()

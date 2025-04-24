@@ -1,3 +1,10 @@
+"""
+Database configuration for the TAO Dividend Sentiment Service.
+
+This module sets up the SQLAlchemy async database connection and session management,
+including the async engine and session factory configuration.
+"""
+
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import declarative_base, sessionmaker
 

@@ -1,3 +1,11 @@
+"""
+Celery configuration for the TAO Dividend Sentiment Service.
+
+This module initializes and configures the Celery application for handling
+background tasks. It uses Redis as both the message broker and result backend,
+and configures task serialization, timezone, and execution limits.
+"""
+
 from celery import Celery
 
 from app.core.config import settings

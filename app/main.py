@@ -1,3 +1,10 @@
+"""
+Main application module for the TAO Dividend Sentiment Service.
+
+This module initializes the FastAPI application, configures CORS middleware,
+and sets up the API router for handling dividend and sentiment-related endpoints.
+"""
+
 import logging
 
 from fastapi import FastAPI

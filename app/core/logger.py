@@ -1,14 +1,22 @@
+"""
+Logging configuration for the TAO Dividend Sentiment Service.
+
+This module sets up a custom logger with both file and stream handlers,
+using UTC timezone for log timestamps. Logs are written to both
+a daily rotating file and stdout with detailed formatting including
+process and thread information.
+"""
+
 import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import pytz
 from pytz import timezone
 
 # Timezone and paths
-TZ: timezone = pytz.timezone('US/Eastern')
+TZ: timezone = pytz.UTC
 BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 LOGS_DIR: Path = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
@@ -22,15 +30,7 @@ log_fmt: str = '%(asctime)s [%(processName)s: %(process)d] [%(threadName)s: %(th
 date_fmt: str = '%Y-%m-%d %H:%M:%S'
 formatter: logging.Formatter = logging.Formatter(fmt=log_fmt, datefmt=date_fmt)
 
-
-# Time converter for formatter
-def customTime(*args: Any) -> time.struct_time:
-    utc_dt: datetime = pytz.utc.localize(datetime.utcnow())
-    converted: datetime = utc_dt.astimezone(TZ)
-    return converted.timetuple()
-
-
-logging.Formatter.converter = customTime
+logging.Formatter.converter = time.gmtime
 
 # Handlers
 file_handler: logging.FileHandler = logging.FileHandler(

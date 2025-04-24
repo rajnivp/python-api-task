@@ -1,3 +1,11 @@
+"""
+Staking service for the TAO Dividend Sentiment Service.
+
+This module provides functionality for managing staking operations based on
+sentiment analysis scores. It handles both staking and unstaking operations
+on the Bittensor network and records these operations in the database.
+"""
+
 import asyncio
 from typing import Dict, Any, Optional
 
@@ -14,6 +22,23 @@ def submit_stake_adjustment(
         netuid: int,
         hotkey: str
 ) -> None:
+    """
+    Submit a stake adjustment based on sentiment score.
+    
+    This function performs the following operations:
+    1. Calculates stake amount based on sentiment score (0.1 * score)
+    2. For positive scores: stakes the calculated amount
+    3. For negative scores: unstakes the absolute value of the calculated amount
+    4. Records the operation in the database
+    
+    Args:
+        sentiment_score (Optional[float]): Sentiment score between -100 and 100
+        netuid (int): Network UID for the stake operation
+        hotkey (str): Hotkey to stake/unstake
+        
+    The function will log errors and record failed operations in the database.
+    If the sentiment score is 0, no stake adjustment is performed.
+    """
     amount = 0.1 * sentiment_score
     if sentiment_score > 0:
         operation = 'stake'
@@ -54,6 +79,13 @@ def submit_stake_adjustment(
     }
 
     async def stake_store_async():
+        """
+        Store the stake operation details in the database.
+        
+        This function creates an async database session and stores the operation
+        details in a single transaction. If any error occurs, the transaction
+        is rolled back.
+        """
         # Create a database session
         engine = create_async_engine(settings.database_url, echo=False)
         async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

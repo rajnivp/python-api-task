@@ -1,3 +1,11 @@
+"""
+Database models for the TAO Dividend Sentiment Service.
+
+This module defines SQLAlchemy models for storing dividend data and sentiment-based
+staking operations. It includes models for tracking dividends received by validators
+and the sentiment analysis and staking operations performed on those dividends.
+"""
+
 import asyncio
 from datetime import datetime
 from typing import Optional, ClassVar
@@ -8,6 +16,16 @@ from app.db.database import Base, engine
 
 
 class Dividend(Base):
+    """
+    Model for storing dividend data received by validators.
+    
+    Attributes:
+        id (int): Primary key
+        netuid (int): Network UID of the validator
+        hotkey (str): Hotkey of the validator
+        amount (float): Dividend amount received
+        timestamp (datetime): When the dividend was received
+    """
     __tablename__: ClassVar[str] = "dividends"
 
     id: int = Column(Integer, primary_key=True, index=True)
@@ -18,6 +36,21 @@ class Dividend(Base):
 
 
 class SentimentStakeOperation(Base):
+    """
+    Model for tracking sentiment analysis and staking operations.
+    
+    Attributes:
+        id (int): Primary key
+        netuid (int): Network UID of the validator
+        hotkey (str): Hotkey of the validator
+        sentiment_score (float): Sentiment analysis score (optional)
+        amount (float): Amount staked/unstaked (positive for stake, negative for unstake)
+        transaction_hash (str): Blockchain transaction hash (optional)
+        operation (str): Type of operation performed
+        status (str): Operation status ('completed' or 'failed')
+        created_at (datetime): When the operation was created
+        completed_at (datetime): When the operation was completed (optional)
+    """
     __tablename__: ClassVar[str] = "sentiment_stake_operations"
 
     id: int = Column(Integer, primary_key=True, index=True)
@@ -33,11 +66,24 @@ class SentimentStakeOperation(Base):
 
 
 async def init_models() -> None:
+    """
+    Initialize database models by creating all tables.
+    This function is called when the application starts.
+    """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
 def run_async(func):
+    """
+    Decorator to safely run async functions in both sync and async contexts.
+    
+    Args:
+        func: Async function to be executed
+        
+    Returns:
+        Future or result of the async function
+    """
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:

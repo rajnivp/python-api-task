@@ -1,3 +1,11 @@
+"""
+Configuration settings for the TAO Dividend Sentiment Service.
+
+This module defines the application settings using Pydantic's BaseSettings,
+which automatically loads configuration from environment variables and .env file.
+It also initializes the BitTensorService with the configured settings.
+"""
+
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -6,6 +14,25 @@ from app.services.bittensor_service import BitTensorService
 
 
 class Settings(BaseSettings):
+    """
+    Application settings loaded from environment variables.
+    
+    Attributes:
+        api_key (str): API key for authentication
+        datura_api_key (str): API key for Datura service
+        chutes_api_key (str): API key for Chutes service
+        redis_url (str): Redis connection URL
+        redis_port (int): Redis port number
+        database_url (str): PostgreSQL database connection URL
+        subtensor_network (str): Bittensor network name
+        wallet_hotkey (str): Bittensor wallet hotkey
+        wallet_netuid (int): Bittensor network UID
+        wallet_name (str): Bittensor wallet name
+        postgres_user (str): PostgreSQL database user
+        postgres_password (str): PostgreSQL database password
+        postgres_db (str): PostgreSQL database name
+        CACHE_EXPIRATION (int): Redis cache expiration time in seconds (default: 120)
+    """
     api_key: str
     datura_api_key: str
     chutes_api_key: str
@@ -26,6 +53,12 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
+    """
+    Get cached application settings.
+    
+    Returns:
+        Settings: Application settings instance
+    """
     return Settings()
 
 
