@@ -211,5 +211,5 @@ python-api-task/
 ## Project videos
 
 1. Project structure overview and implementation decisions: https://www.loom.com/share/854b83ed7adc4749a94f3fdc3c298ac1
-2. Application running demo: 
+2. Application running demo: https://www.loom.com/share/486f09acea9a47dfb7bd8d112d92464a
 
